@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Data and models
+data/
+*.npy
+*.pkl
+
+# Python
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Node / React
+node_modules/
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
