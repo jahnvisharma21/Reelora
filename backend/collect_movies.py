@@ -19,7 +19,9 @@ TARGETS = {
 if TEST_MODE:
     TARGETS = {lang: 20 for lang in TARGETS}
 
-
+# minimum vote count per language (smaller industries get a lower bar)
+MIN_VOTES = {"kn": 10, "ml": 20, "te": 30, "ta": 30}
+DEFAULT_MIN_VOTES = 50
 def discover_ids(language, target):
     """Collect up to `target` movie IDs for one original language."""
     ids = []
@@ -28,7 +30,7 @@ def discover_ids(language, target):
         data = tmdb_get("/discover/movie", params={
             "with_original_language": language,
             "sort_by": "vote_count.desc",
-            "vote_count.gte": 50,
+            "vote_count.gte": MIN_VOTES.get(language, DEFAULT_MIN_VOTES),
             "include_adult": "false",
             "page": page,
         })
