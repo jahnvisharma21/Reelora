@@ -1,24 +1,37 @@
 import os
 import json
+import time
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("TMDB_TOKEN")
 BASE_URL = "https://api.themoviedb.org/3"
-HEADERS = {"Authorization": f"Bearer {TOKEN}", "accept": "application/json"}
+
+session = requests.Session()
+session.headers.update({"Authorization": f"Bearer {TOKEN}", "accept": "application/json"})
+
+
+def tmdb_get(path, params=None, retries=5):
+    """GET a TMDB endpoint. If the connection fails, wait and try again."""
+    for attempt in range(1, retries + 1):
+        try:
+            response = session.get(f"{BASE_URL}{path}", params=params, timeout=15)
+            if response.status_code == 429:  # TMDB says: slow down
+                time.sleep(2 * attempt)
+                continue
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as error:
+            print(f"  attempt {attempt}/{retries} failed: {type(error).__name__}")
+            if attempt == retries:
+                raise
+            time.sleep(2 * attempt)  # wait 2s, 4s, 6s... between tries
 
 
 def get_movie_details(movie_id):
     """Fetch full details, keywords and credits for one movie in a single call."""
-    response = requests.get(
-        f"{BASE_URL}/movie/{movie_id}",
-        headers=HEADERS,
-        params={"append_to_response": "keywords,credits"},
-        timeout=15,
-    )
-    response.raise_for_status()
-    return response.json()
+    return tmdb_get(f"/movie/{movie_id}", params={"append_to_response": "keywords,credits"})
 
 
 def clean_movie(raw):
@@ -45,11 +58,8 @@ def clean_movie(raw):
     }
 
 
-# Interstellar's TMDB id is 157336 (as far as I know; the output will confirm)
-raw = get_movie_details(157336)
-
-print("Top-level fields TMDB sent us:", len(raw.keys()))
-print()
-
-movie = clean_movie(raw)
-print(json.dumps(movie, indent=2, ensure_ascii=False))
+if __name__ == "__main__":
+    raw = get_movie_details(157336)
+    print("Top-level fields TMDB sent us:", len(raw.keys()))
+    print()
+    print(json.dumps(clean_movie(raw), indent=2, ensure_ascii=False))
